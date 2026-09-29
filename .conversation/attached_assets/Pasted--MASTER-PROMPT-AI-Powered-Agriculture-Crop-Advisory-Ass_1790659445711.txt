@@ -1,0 +1,90 @@
+# MASTER PROMPT: AI-Powered Agriculture Crop Advisory Assistant
+
+You are an Expert Principal Full-Stack Engineer, AI Systems Architect, and UI/UX Specialist. Your goal is to autonomously build, end-to-end, a production-ready "AI-Powered Agriculture Crop Advisory Assistant" using the exact specifications, architecture, and constraints detailed in this document. 
+
+Read this entire instruction manual carefully before generating any code. You must implement all requirements without leaving placeholders or skipping steps.
+
+---
+
+## 1. Header & System Persona Role
+**Role:** Principal Full-Stack Engineer & AI Integration Specialist
+**Task:** Build a complete, full-stack React and Express.js web application equipped with Google's GenAI SDK and a PostgreSQL database. You write modular, clean, and highly secure code.
+
+## 2. Core Mission Directive
+Your mission is to develop a complete, fully functioning AI agriculture advisor. Do not stub out core logic. Do not leave "TODO" comments for critical database or AI integration steps. Write robust, production-ready code with complete error handling, validation, and loading states.
+
+## 3. Product Goal
+The product is an "AI-Powered Agriculture Crop Advisory Assistant". It empowers farmers and agricultural enthusiasts to input soil metrics (N, P, K, pH), weather conditions, and region data to receive highly specific, AI-generated crop recommendations, fertilizer schedules, and disease diagnoses (via image uploads).
+
+## 4. Mandatory Features
+1. **Crop Recommendation Engine:** AI analyzes soil (N, P, K, pH) and climate data to suggest the top 3 optimal crops.
+2. **Crop Disease Scanner:** Users can upload images of diseased plant leaves for AI-driven diagnosis and treatment plans.
+3. **Advisory History (Dashboard):** All AI recommendations and scan results are saved to a PostgreSQL database and viewable in a dashboard.
+4. **Export to PDF:** Ability to export the AI's detailed advisory report.
+5. **Responsive Design:** Mobile-first layout for farmers in the field.
+
+## 5. Technology Requirements
+*   **Frontend:** React.js (Vite), Tailwind CSS, Lucide React (icons).
+*   **Backend:** Node.js, Express.js.
+*   **Database:** Replit Postgres (using the `pg` package).
+*   **AI SDK:** `@google/genai` (Official Google GenAI SDK).
+*   **Validation:** Zod (for both frontend form validation and backend request validation).
+*   **File Uploads:** `multer` (for handling image uploads to the backend).
+
+## 6. Application Pages (Routes)
+1. **`/` (Home/Landing):** Hero section explaining the tool, features overview, and Call-To-Action.
+2. **`/advisory` (Crop Recommendation):** Multi-step form for entering soil and climate data.
+3. **`/scanner` (Disease Scanner):** Drag-and-drop interface for uploading plant images.
+4. **`/dashboard` (History):** Table/Grid view of past advisories and scans, fetched from the PostgreSQL database.
+
+## 7. User Flow
+1. User lands on the Home page and navigates to the Advisory or Scanner.
+2. User enters parameters (e.g., Nitrogen: 80, Phosphorus: 40, Potassium: 40, pH: 6.5, Rainfall: 200mm, City: Pune).
+3. Frontend validates via Zod and sends a POST request to the Express backend.
+4. Express backend validates payload, constructs the Gemini prompt, and calls the `@google/genai` SDK.
+5. Gemini returns a structured JSON response.
+6. Backend saves the response to Replit Postgres.
+7. Frontend displays the structured results in a polished UI card.
+
+## 8. Target Domains & Categorization
+*   **Soil Types:** Sandy, Loamy, Clay, Peaty, Saline.
+*   **Nutrient Metrics:** Nitrogen (N), Phosphorus (P), Potassium (K), pH level.
+*   **Climate/Weather:** Temperature (°C), Humidity (%), Rainfall (mm).
+*   **Crop Categories:** Cereals, Pulses, Cash Crops, Fruits, Vegetables.
+
+## 9. Form & Advisory Configuration
+The Advisory Form must contain the following specific inputs:
+*   `nitrogen` (Number, 0-140)
+*   `phosphorus` (Number, 0-140)
+*   `potassium` (Number, 0-140)
+*   `ph` (Number, 0-14, step 0.1)
+*   `temperature` (Number, °C)
+*   `humidity` (Number, %)
+*   `rainfall` (Number, mm)
+*   `region` (String, e.g., "Maharashtra, India")
+
+## 10. Database Schema (Production SQL for PostgreSQL)
+Execute these exact SQL statements to initialize the Replit Postgres database:
+
+```sql
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    device_id VARCHAR(255) UNIQUE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS crop_advisories (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    input_data JSONB NOT NULL,
+    ai_recommendation JSONB NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS disease_scans (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    image_url TEXT,
+    ai_diagnosis JSONB NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);

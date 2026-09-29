@@ -1,0 +1,1 @@
+- [Gemini model availability](gemini-model-availability.md) — direct Gemini API access may require a current model name and bounded transient-error fallback.

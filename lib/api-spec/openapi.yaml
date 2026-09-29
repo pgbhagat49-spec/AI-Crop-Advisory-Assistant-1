@@ -3,13 +3,19 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Crop Advisor API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: advisory
+    description: Crop recommendations and advisory history
+  - name: scanner
+    description: Plant disease scans
+  - name: dashboard
+    description: Dashboard summaries and exports
 paths:
   /healthz:
     get:
@@ -24,7 +30,144 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /advisories:
+    get:
+      operationId: listAdvisories
+      tags: [advisory]
+      summary: List saved crop advisories
+      parameters:
+        - $ref: "#/components/parameters/DeviceId"
+      responses:
+        "200":
+          description: Saved advisories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Advisory"
+    post:
+      operationId: createAdvisory
+      tags: [advisory]
+      summary: Generate and save a crop advisory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdvisoryInput"
+      responses:
+        "201":
+          description: Generated advisory
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Advisory"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "502":
+          $ref: "#/components/responses/AiUnavailable"
+  /scans:
+    get:
+      operationId: listScans
+      tags: [scanner]
+      summary: List saved disease scans
+      parameters:
+        - $ref: "#/components/parameters/DeviceId"
+      responses:
+        "200":
+          description: Saved scans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Scan"
+    post:
+      operationId: createScan
+      tags: [scanner]
+      summary: Diagnose a plant leaf image and save the result
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScanInput"
+      responses:
+        "201":
+          description: Generated scan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Scan"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "502":
+          $ref: "#/components/responses/AiUnavailable"
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard totals and recent activity
+      parameters:
+        - $ref: "#/components/parameters/DeviceId"
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+  /advisories/{id}/export:
+    get:
+      operationId: exportAdvisory
+      tags: [dashboard]
+      summary: Export an advisory report as printable HTML
+      parameters:
+        - $ref: "#/components/parameters/DeviceId"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Printable advisory report
+          content:
+            text/html:
+              schema:
+                type: string
+        "404":
+          $ref: "#/components/responses/NotFound"
 components:
+  parameters:
+    DeviceId:
+      name: x-device-id
+      in: header
+      required: false
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    AiUnavailable:
+      description: AI service unavailable
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +176,202 @@ components:
           type: string
       required:
         - status
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    AdvisoryInput:
+      type: object
+      required:
+        - nitrogen
+        - phosphorus
+        - potassium
+        - ph
+        - temperature
+        - humidity
+        - rainfall
+        - region
+      properties:
+        nitrogen:
+          type: number
+          minimum: 0
+          maximum: 140
+        phosphorus:
+          type: number
+          minimum: 0
+          maximum: 140
+        potassium:
+          type: number
+          minimum: 0
+          maximum: 140
+        ph:
+          type: number
+          minimum: 0
+          maximum: 14
+        temperature:
+          type: number
+        humidity:
+          type: number
+          minimum: 0
+          maximum: 100
+        rainfall:
+          type: number
+          minimum: 0
+        region:
+          type: string
+          minLength: 2
+          maxLength: 160
+        soilType:
+          type: string
+          enum: [Sandy, Loamy, Clay, Peaty, Saline]
+        cropCategory:
+          type: string
+          enum: [Cereals, Pulses, Cash Crops, Fruits, Vegetables]
+    Advisory:
+      type: object
+      required: [id, inputData, recommendation, createdAt]
+      properties:
+        id:
+          type: integer
+        inputData:
+          $ref: "#/components/schemas/AdvisoryInput"
+        recommendation:
+          $ref: "#/components/schemas/Recommendation"
+        createdAt:
+          type: string
+          format: date-time
+    Recommendation:
+      type: object
+      required: [summary, crops, fertilizerSchedule, cautions]
+      properties:
+        summary:
+          type: string
+        crops:
+          type: array
+          items:
+            $ref: "#/components/schemas/CropRecommendation"
+        fertilizerSchedule:
+          type: array
+          items:
+            $ref: "#/components/schemas/FertilizerStep"
+        cautions:
+          type: array
+          items:
+            type: string
+    CropRecommendation:
+      type: object
+      required: [name, category, fitScore, reason, plantingWindow]
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        fitScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+        reason:
+          type: string
+        plantingWindow:
+          type: string
+    FertilizerStep:
+      type: object
+      required: [stage, timing, recommendation]
+      properties:
+        stage:
+          type: string
+        timing:
+          type: string
+        recommendation:
+          type: string
+    ScanInput:
+      type: object
+      required: [imageData, fileName]
+      properties:
+        imageData:
+          type: string
+          description: Base64 data URL for a plant leaf image
+          maxLength: 8000000
+        fileName:
+          type: string
+          maxLength: 255
+        region:
+          type: string
+          maxLength: 160
+    Scan:
+      type: object
+      required: [id, imageUrl, diagnosis, createdAt]
+      properties:
+        id:
+          type: integer
+        imageUrl:
+          type: string
+        diagnosis:
+          $ref: "#/components/schemas/Diagnosis"
+        createdAt:
+          type: string
+          format: date-time
+    Diagnosis:
+      type: object
+      required: [plant, condition, confidence, severity, explanation, treatment, prevention]
+      properties:
+        plant:
+          type: string
+        condition:
+          type: string
+        confidence:
+          type: integer
+          minimum: 0
+          maximum: 100
+        severity:
+          type: string
+          enum: [Low, Moderate, High, Unknown]
+        explanation:
+          type: string
+        treatment:
+          type: array
+          items:
+            type: string
+        prevention:
+          type: array
+          items:
+            type: string
+    ActivityItem:
+      type: object
+      required: [id, type, title, subtitle, createdAt]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [advisory, scan]
+        title:
+          type: string
+        subtitle:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    DashboardSummary:
+      type: object
+      required: [advisoryCount, scanCount, latestAdvisory, latestScan, recentActivity]
+      properties:
+        advisoryCount:
+          type: integer
+        scanCount:
+          type: integer
+        latestAdvisory:
+          oneOf:
+            - $ref: "#/components/schemas/Advisory"
+            - type: "null"
+        latestScan:
+          oneOf:
+            - $ref: "#/components/schemas/Scan"
+            - type: "null"
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityItem"
 
